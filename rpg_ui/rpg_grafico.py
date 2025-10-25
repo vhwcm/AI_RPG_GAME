@@ -13,7 +13,7 @@ os.environ['GRPC_VERBOSITY'] = 'ERROR'
 os.environ['GLOG_minloglevel'] = '2'
 
 ##############################################################################Configurando Gemini#####################################################################################################################################################################
-API_KEY = 'YOUR_API_KEY'
+API_KEY = 'AIzaSyDuEYfowKxl0QylDRTlf7_6BnQqn09x0Bw'
 genai.configure(api_key=API_KEY)
 
 generation_config = {

@@ -50,25 +50,12 @@ mini_games/
 
 ---
 
-## 🚀 Quick Start
-
-### 1️⃣ **Automatic Setup**
-```bash
-# Clone the repository
-git clone https://github.com/vhwcm/mini_games.git
-cd mini_games
-
-# Run the automatic setup
-chmod +x setup.sh
-./setup.sh
-```
-
-### 2️⃣ **Get API Key**
+### **Get API Key**
 1. 🌐 Go to: **[Google AI Studio](https://aistudio.google.com)**
 2. 🔑 Create an account and get a **free** API key
 3. 📝 Set it up in the Python files (see [Setup](#️-full-setup) section)
 
-### 3️⃣ **Run Games**
+### **Run Games**
 ```bash
 # Check if everything is OK
 ./check_config.sh
