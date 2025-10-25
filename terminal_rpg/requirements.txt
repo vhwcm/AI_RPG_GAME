@@ -1,0 +1,4 @@
+# Python dependencies for terminal_rpg
+# Install with: pip3 install -r requirements.txt
+
+google-generativeai>=0.3.0

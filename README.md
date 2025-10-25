@@ -5,78 +5,11 @@
 [![Pygame](https://img.shields.io/badge/Pygame-CE%202.5.2-red.svg)](https://pyga.me)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Two strategy RPG games developed with artificial intelligence using Google Gemini AI**
-
-## 📋 Table of Contents
-
-- [📁 Project Structure](#-project-structure)
-- [🚀 Quick Start](#-quick-start)
-- [⚙️ Full Setup](#️-full-setup)
-- [🎮 How to Play](#-how-to-play)
-- [🔧 Features](#-features)
-- [💻 Compatibility](#-compatibility)
-- [🐛 Troubleshooting](#-troubleshooting)
-- [📚 Documentation](#-documentation)
-- [🤝 Contributing](#-contributing)
-
----
-
-## 📁 Project Structure
-
-```
-mini_games/
-├── 🎯 rpg_with_gemini/
-│   ├── 🖥️ terminal_rpg/        # Terminal version
-│   │   ├── rpg.py             # Main game
-│   │   ├── worlds/            # Automatic saves
-│   │   └── README.md          # Specific documentation
-│   └── 🎨 graphical_rpg/      # Graphical version
-│       ├── graphical_rpg.py   # Main game
-│       ├── adventures/        # Saves (created automatically)
-│       ├── leaders/           # 🖼️ Leader images (19 species)
-│       ├── kingdoms/          # 🏰 Kingdom images
-│       ├── music/             # 🎵 Sound effects
-│       ├── Cinzel/            # 🔤 Custom fonts
-│       └── README.md          # Specific documentation
-├── 🐍 venv/                   # Python virtual environment
-├── 📄 ENVIRONMENT_SETUP.md    # Detailed setup guide
-├── 📄 TECHNICAL_CHANGES.md    # Technical change log
-├── 📄 GEMINI_MODELS.md       # AI model information
-├── 🔧 setup.sh               # Automatic setup script
-├── 🔍 check_config.sh        # Verification script
-├── 🎮 run_games.sh           # Menu to run games
-└── 📄 README.md              # This file
-```
-
----
 
 ### **Get API Key**
 1. 🌐 Go to: **[Google AI Studio](https://aistudio.google.com)**
 2. 🔑 Create an account and get a **free** API key
-3. 📝 Set it up in the Python files (see [Setup](#️-full-setup) section)
-
-### **Run Games**
-```bash
-# Check if everything is OK
-./check_config.sh
-
-# Play
-./run_games.sh
-```
-
----
-
-## ⚙️ Full Setup
-
-This section is a placeholder. For detailed instructions, please refer to `ENVIRONMENT_SETUP.md`.
-
-### 🔑 **Google Gemini API Configuration**
-
-#### **Get API Key:**
-1. 🌐 Go to: **[Google AI Studio](https://aistudio.google.com)**
-2. 🔐 Log in with your Google account
-3. ➕ Click on **"Get API Key"** → **"Create API Key"**
-4. 📋 Copy the generated key (format: `AIzaSyA...`)
+3. 📝 Set it up in the Python files 
 
 #### **Configure in Files:**
 
@@ -98,19 +31,18 @@ API_KEY = 'YOUR_KEY_HERE'  # 👈 Replace with your actual key
 ```bash
 cd rpg_with_gemini/terminal_rpg
 source ../../venv/bin/activate
+chmod +x install_dependencies.sh && chmod +x check_env.sh
+./install_dependencies.sh
+./check_env.sh
 python3 rpg.py
 ```
-
-**Features:**
-- 📝 Text-based interface
-- 🌟 **Any species/race** you can imagine
-- 💾 Automatic saving in `worlds/`
-- 👥 Basic multiplayer system (same file)
-- ⏰ Type **"quit"** to exit
 
 ### � **Graphical RPG**
 ```bash
 cd rpg_with_gemini/graphical_rpg  
 source ../../venv/bin/activate
+chmod +x install_dependencies.sh && chmod +x check_env.sh
+./install_dependencies.sh
+./check_env.sh
 python3 graphical_rpg.py
 ```

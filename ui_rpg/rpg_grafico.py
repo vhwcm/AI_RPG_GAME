@@ -6,7 +6,6 @@ import pygame_gui
 import google.generativeai as genai
 import json
 
-# Silenciar warnings do Google Cloud (opcional)
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 os.environ['GRPC_VERBOSITY'] = 'ERROR'
@@ -34,8 +33,10 @@ model_h = genai.GenerativeModel(model_name='gemini-2.5-pro',generation_config=ge
 chat_history = model_h.start_chat(history=[])
 model = genai.GenerativeModel(model_name='gemini-2.5-pro',generation_config=generation_config,system_instruction=system_instruction, safety_settings=safety_settings,)
 chat = model.start_chat(history=[])
-#####################################################################################################################################################################################################################################################################
-#################################################LOOP DO JOGO#####################################################################################################################################################################################################
+
+
+#################################################GAME LOOP#####################################################################################################################################################################################################
+
 global prompt
 
 #formatando o texto
