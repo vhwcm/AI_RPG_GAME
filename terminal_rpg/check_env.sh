@@ -10,7 +10,7 @@ echo ""
 ALL_OK=true
 
 # Check if Python3 is installed
-echo "[1/5] Checking Python3..."
+echo "[1/6] Checking Python3..."
 if ! command -v python3 &> /dev/null; then
     echo "  ✗ ERROR: Python3 is not installed!"
     ALL_OK=false
@@ -21,21 +21,45 @@ fi
 
 echo ""
 
-# Check if pip is installed
-echo "[2/5] Checking pip3..."
-if ! command -v pip3 &> /dev/null; then
-    echo "  ✗ ERROR: pip3 is not installed!"
+# Check if virtual environment exists
+echo "[2/6] Checking virtual environment..."
+if [ ! -d "venv" ]; then
+    echo "  ✗ ERROR: Virtual environment not found!"
+    echo "    Run './install_dependencies.sh' to create it"
     ALL_OK=false
 else
-    PIP_VERSION=$(pip3 --version)
-    echo "  ✓ pip3 is installed"
+    echo "  ✓ Virtual environment exists"
+fi
+
+echo ""
+
+# Activate virtual environment for package checks
+if [ -d "venv" ]; then
+    source venv/bin/activate
+    PYTHON_CMD="python"
+    echo "[3/6] Checking pip in virtual environment..."
+    if ! command -v pip &> /dev/null; then
+        echo "  ✗ ERROR: pip is not installed in virtual environment!"
+        ALL_OK=false
+    else
+        echo "  ✓ pip is installed in virtual environment"
+    fi
+else
+    PYTHON_CMD="python3"
+    echo "[3/6] Checking pip3..."
+    if ! command -v pip3 &> /dev/null; then
+        echo "  ✗ ERROR: pip3 is not installed!"
+        ALL_OK=false
+    else
+        echo "  ✓ pip3 is installed"
+    fi
 fi
 
 echo ""
 
 # Check if google-generativeai is installed
-echo "[3/5] Checking Python packages..."
-if ! python3 -c "import google.generativeai" 2>/dev/null; then
+echo "[4/6] Checking Python packages..."
+if ! $PYTHON_CMD -c "import google.generativeai" 2>/dev/null; then
     echo "  ✗ ERROR: google-generativeai is not installed!"
     echo "    Run './install_dependencies.sh' to install it"
     ALL_OK=false
@@ -46,7 +70,7 @@ fi
 echo ""
 
 # Check if required files exist
-echo "[4/5] Checking required files..."
+echo "[5/6] Checking required files..."
 if [ ! -f "rpg.py" ]; then
     echo "  ✗ ERROR: rpg.py not found!"
     ALL_OK=false
@@ -57,7 +81,7 @@ fi
 echo ""
 
 # Check if API key is configured
-echo "[5/5] Checking API key configuration..."
+echo "[6/6] Checking API key configuration..."
 if [ -f "rpg.py" ]; then
     if grep -q "API_KEY = 'YOUR API KEY'" rpg.py; then
         echo "  ✗ WARNING: API key is not configured!"
@@ -89,7 +113,8 @@ if [ "$ALL_OK" = true ]; then
     echo "✓ Environment check passed!"
     echo "==================================="
     echo ""
-    echo "You can now run: python3 rpg.py"
+    echo "You can now run: ./run.sh"
+    echo "Or manually: source venv/bin/activate && python rpg.py"
     exit 0
 else
     echo "✗ Environment check failed!"
