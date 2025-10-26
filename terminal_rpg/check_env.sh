@@ -59,7 +59,7 @@ echo ""
 
 # Check if google-generativeai is installed
 echo "[4/6] Checking Python packages..."
-if ! $PYTHON_CMD -c "import google.generativeai" 2>/dev/null; then
+if ! $PYTHON_CMD -c "import google.generativeai" 2>/dev/null 1>/dev/null; then
     echo "  ✗ ERROR: google-generativeai is not installed!"
     echo "    Run './install_dependencies.sh' to install it"
     ALL_OK=false

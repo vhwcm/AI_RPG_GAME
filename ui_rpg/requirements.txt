@@ -1,6 +1,7 @@
 # Python dependencies for ui_rpg
 # Install with: pip3 install -r requirements.txt
 
-pygame>=2.5.0
+# Use pygame-ce (community edition) which is compatible with pygame-gui
+pygame-ce>=2.5.0
 pygame-gui>=0.6.0
 google-generativeai>=0.3.0

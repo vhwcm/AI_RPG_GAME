@@ -10,7 +10,7 @@ echo ""
 ALL_OK=true
 
 # Check if Python3 is installed
-echo "[1/7] Checking Python3..."
+echo "[1/8] Checking Python3..."
 if ! command -v python3 &> /dev/null; then
     echo "  ✗ ERROR: Python3 is not installed!"
     ALL_OK=false
@@ -21,30 +21,56 @@ fi
 
 echo ""
 
-# Check if pip is installed
-echo "[2/7] Checking pip3..."
-if ! command -v pip3 &> /dev/null; then
-    echo "  ✗ ERROR: pip3 is not installed!"
+# Check if virtual environment exists
+echo "[2/8] Checking virtual environment..."
+if [ ! -d "venv" ]; then
+    echo "  ✗ ERROR: Virtual environment not found!"
+    echo "    Run './install_dependencies.sh' to create it"
     ALL_OK=false
 else
-    echo "  ✓ pip3 is installed"
+    echo "  ✓ Virtual environment exists"
+fi
+
+echo ""
+
+# Activate virtual environment for package checks
+if [ -d "venv" ]; then
+    source venv/bin/activate
+    PYTHON_CMD="python"
+    echo "[3/8] Checking pip in virtual environment..."
+    if ! command -v pip &> /dev/null; then
+        echo "  ✗ ERROR: pip is not installed in virtual environment!"
+        ALL_OK=false
+    else
+        echo "  ✓ pip is installed in virtual environment"
+    fi
+else
+    PYTHON_CMD="python3"
+    echo "[3/8] Checking pip3..."
+    if ! command -v pip3 &> /dev/null; then
+        echo "  ✗ ERROR: pip3 is not installed!"
+        ALL_OK=false
+    else
+        echo "  ✓ pip3 is installed"
+    fi
 fi
 
 echo ""
 
 # Check if required Python packages are installed
-echo "[3/7] Checking Python packages..."
+echo "[4/8] Checking Python packages..."
 PACKAGES_OK=true
 
-if ! python3 -c "import pygame" 2>/dev/null; then
-    echo "  ✗ ERROR: pygame is not installed!"
+# Check pygame-ce (it's imported as 'pygame' but package is 'pygame-ce')
+if ! $PYTHON_CMD -c "import pygame; pygame.init()" 2>/dev/null 1>/dev/null; then
+    echo "  ✗ ERROR: pygame-ce is not installed!"
     PACKAGES_OK=false
     ALL_OK=false
 else
-    echo "  ✓ pygame is installed"
+    echo "  ✓ pygame-ce is installed"
 fi
 
-if ! python3 -c "import pygame_gui" 2>/dev/null; then
+if ! $PYTHON_CMD -c "import pygame_gui" 2>/dev/null 1>/dev/null; then
     echo "  ✗ ERROR: pygame-gui is not installed!"
     PACKAGES_OK=false
     ALL_OK=false
@@ -52,7 +78,7 @@ else
     echo "  ✓ pygame-gui is installed"
 fi
 
-if ! python3 -c "import google.generativeai" 2>/dev/null; then
+if ! $PYTHON_CMD -c "import google.generativeai" 2>/dev/null 1>/dev/null; then
     echo "  ✗ ERROR: google-generativeai is not installed!"
     PACKAGES_OK=false
     ALL_OK=false
@@ -68,7 +94,7 @@ fi
 echo ""
 
 # Check if required files exist
-echo "[4/7] Checking required files..."
+echo "[5/8] Checking required files..."
 if [ ! -f "rpg_grafico.py" ]; then
     echo "  ✗ ERROR: rpg_grafico.py not found!"
     ALL_OK=false
@@ -79,7 +105,7 @@ fi
 echo ""
 
 # Check if API key is configured
-echo "[5/7] Checking API key configuration..."
+echo "[6/8] Checking API key configuration..."
 if [ -f "rpg_grafico.py" ]; then
     # Check if API key looks like a placeholder or is empty
     API_LINE=$(grep "^API_KEY = " rpg_grafico.py | head -n 1)
@@ -99,7 +125,7 @@ fi
 echo ""
 
 # Check if required directories exist
-echo "[6/7] Checking required directories..."
+echo "[7/8] Checking required directories..."
 REQUIRED_DIRS=("aventuras" "Cinzel" "lideres" "musicas" "reinos")
 DIRS_OK=true
 
@@ -116,7 +142,7 @@ done
 echo ""
 
 # Check if required assets exist
-echo "[7/7] Checking required assets..."
+echo "[8/8] Checking required assets..."
 ASSETS_OK=true
 
 if [ ! -f "Cinzel/Cinzel-VariableFont_wght.ttf" ]; then
@@ -163,7 +189,8 @@ if [ "$ALL_OK" = true ]; then
     echo "✓ Environment check passed!"
     echo "==================================="
     echo ""
-    echo "You can now run: python3 rpg_grafico.py"
+    echo "You can now run: ./run.sh"
+    echo "Or manually: source venv/bin/activate && python rpg_grafico.py"
     exit 0
 else
     echo "✗ Environment check failed!"

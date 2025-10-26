@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script to install all dependencies for ui_rpg
+# Script to install all dependencies for ui_rpg using a virtual environment
 
 echo "==================================="
 echo "Installing ui_rpg dependencies..."
@@ -12,19 +12,37 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-# Check if pip is installed
-if ! command -v pip3 &> /dev/null; then
-    echo "ERROR: pip3 is not installed!"
-    echo "Please install pip3 before running this script."
-    exit 1
-fi
-
-echo "Python3 and pip3 are installed."
+echo "Python3 is installed."
 echo ""
 
-# Upgrade pip
+# Create virtual environment if it doesn't exist
+VENV_DIR="venv"
+if [ ! -d "$VENV_DIR" ]; then
+    echo "Creating virtual environment..."
+    python3 -m venv "$VENV_DIR"
+    
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "ERROR: Failed to create virtual environment!"
+        echo "You may need to install python3-venv:"
+        echo "  sudo apt install python3-venv python3-full"
+        exit 1
+    fi
+    
+    echo "✓ Virtual environment created successfully"
+else
+    echo "✓ Virtual environment already exists"
+fi
+
+echo ""
+
+# Activate virtual environment
+echo "Activating virtual environment..."
+source "$VENV_DIR/bin/activate"
+
+# Upgrade pip in virtual environment
 echo "Upgrading pip..."
-pip3 install --upgrade pip
+pip install --upgrade pip --quiet
 
 echo ""
 echo "Installing required Python packages..."
@@ -33,19 +51,19 @@ echo ""
 # Install from requirements.txt if it exists, otherwise install individually
 if [ -f "requirements.txt" ]; then
     echo "Installing from requirements.txt..."
-    pip3 install -r requirements.txt
+    pip install -r requirements.txt
 else
-    # Install pygame
-    echo "Installing pygame..."
-    pip3 install pygame
+    # Install pygame-ce (community edition, compatible with pygame-gui)
+    echo "Installing pygame-ce..."
+    pip install pygame-ce
 
     # Install pygame-gui
     echo "Installing pygame-gui..."
-    pip3 install pygame-gui
+    pip install pygame-gui
 
     # Install google-generativeai
     echo "Installing google-generativeai..."
-    pip3 install google-generativeai
+    pip install google-generativeai
 fi
 
 echo ""
@@ -53,7 +71,13 @@ echo "==================================="
 echo "Installation completed successfully!"
 echo "==================================="
 echo ""
+echo "✓ Virtual environment created at: $VENV_DIR/"
+echo "✓ All dependencies installed"
+echo ""
 echo "Next steps:"
 echo "1. Edit rpg_grafico.py and replace the API_KEY with your actual Google Gemini API key"
-echo "2. Run '../check_env.sh' from the repository root to verify the installation"
-echo "3. Run 'python3 rpg_grafico.py' to start the game"
+echo "2. Run './check_env.sh' to verify the installation"
+echo "3. Run the game with: ./run.sh"
+echo ""
+echo "Note: A 'run.sh' script has been created to automatically activate"
+echo "      the virtual environment and start the game."

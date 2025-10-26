@@ -6,13 +6,14 @@ import pygame_gui
 import google.generativeai as genai
 import json
 
+# Silenciar warnings do Google Cloud (opcional)
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 os.environ['GRPC_VERBOSITY'] = 'ERROR'
 os.environ['GLOG_minloglevel'] = '2'
 
 ##############################################################################Configurando Gemini#####################################################################################################################################################################
-API_KEY = 'AIzaSyDuEYfowKxl0QylDRTlf7_6BnQqn09x0Bw'
+API_KEY = 'YOUR API KEY'
 genai.configure(api_key=API_KEY)
 
 generation_config = {
@@ -83,8 +84,26 @@ def game_screen():
         prompt = f"{conteudo}. Eu  estou continuando minha aventura. sou o imperador(a) do reino {reino} e gostaria de saber como ele está. Meu nome é {nome} e sou da raça{especie}."
     else:     
         prompt = f"Gostaria de criar um reino de '{especie}' chamado '{reino}'. Meu nome será '{nome}'. Para iniciar quero discutir qual será a religião do meu reino."
-    chat.send_message(prompt)
-    respost = chat.last.text
+    
+    # Try to send message with error handling
+    try:
+        chat.send_message(prompt)
+        respost = chat.last.text
+    except Exception as e:
+        error_msg = str(e)
+        print(f"\n❌ ERROR: {error_msg}\n")
+        if "429" in error_msg or "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
+            print("⚠️  API QUOTA EXCEEDED!")
+            print("=" * 60)
+            print("Your Google Gemini API key has reached its usage limit.")
+            print("\nSOLUTIONS:")
+            print("1. Wait a few minutes and try again (free tier resets)")
+            print("2. Generate a new API key at:")
+            print("   https://aistudio.google.com/app/apikey")
+            print("3. Replace the API_KEY in rpg_grafico.py (line 16)")
+            print("=" * 60)
+        pygame.quit()
+        raise
 
     #retirar possiveis respostas erradas do gemini
     respost = respost.replace("json", "")
@@ -160,8 +179,18 @@ def game_screen():
                             if prompt != "fim":
                                 text_entry.hide()
                                 pygame.display.flip()
-                                chat.send_message(prompt)
-                                respostaa = chat.last.text
+                                
+                                # Try to send message with error handling
+                                try:
+                                    chat.send_message(prompt)
+                                    respostaa = chat.last.text
+                                except Exception as e:
+                                    error_msg = str(e)
+                                    print(f"\n❌ ERROR: {error_msg}\n")
+                                    if "429" in error_msg or "quota" in error_msg.lower():
+                                        print("⚠️  API quota exceeded! Please wait or get a new API key.")
+                                    pygame.quit()
+                                    raise
                                 respostaa = respostaa.replace("json", "")
                                 respostaa = respostaa.replace("```", "")
                                 respostaa = respostaa.replace("---", "")
