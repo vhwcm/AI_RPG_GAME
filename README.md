@@ -37,7 +37,7 @@ chmod +x install_dependencies.sh && chmod +x check_env.sh
 python3 rpg.py
 ```
 
-### � **Graphical RPG**
+###  **🎨Graphical RPG**
 ```bash
 cd rpg_with_gemini/graphical_rpg  
 source ../../venv/bin/activate
@@ -46,3 +46,11 @@ chmod +x install_dependencies.sh && chmod +x check_env.sh
 ./check_env.sh
 python3 graphical_rpg.py
 ```
+
+### Observation
+
+This was my first small project, made during the summer break of my first year of college. The goal was to create a kind of RPG using AI. It was one of the first programs I wrote, so it isn't very well modularized and error handling is scattered throughout the code.
+
+The idea was to have some fixed metrics that the AI would control automatically, but the AI is definitely not great at remembering values for long (try it!). Since Gemini has a free API, I wanted to build something that used it.
+
+I also wanted to be able to continue the RPG later, so I recorded everything the AI did — in a summarized form — and saved it to a file when exiting the game. That way, when I returned, the AI would read the file and have context about what I had already done. This system isn't well structured and the AI still has a context limit, so it will eventually forget past events. Someday I plan to build a better long-term memory system, probably using more variables and even a database.
