@@ -1,59 +1,96 @@
-# 🎮 Mini Games - RPG with Google Gemini
+# RPG Infinito com Google Gemini
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://python.org)
-[![Gemini](https://img.shields.io/badge/Google-Gemini%201.5%20Pro-green.svg)](https://ai.google.dev)
-[![Pygame](https://img.shields.io/badge/Pygame-CE%202.5.2-red.svg)](https://pyga.me)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+Um RPG de estratégia e aventura onde a narrativa, as consequências e o estado do mundo são gerados dinamicamente em tempo real por Inteligência Artificial.
+
+## Sobre o Projeto
+
+Este projeto explora o uso de Large Language Models (LLMs) como o motor lógico de um jogo (Game Engine). Ao contrário de RPGs tradicionais com árvores de diálogo pré-programadas, este jogo utiliza o Google Gemini 1.5 Flash para criar uma experiência onde nenhuma aventura é igual a outra, simulando um RPG falado.
+
+O sistema gerencia inventário, economia, religião e eventos políticos através dos prompts, oferecendo duas interfaces:
+
+Modo Gráfico (GUI): Uma experiência visual imersiva usando Pygame.
+
+Modo Texto (CLI): Uma versão leve e rápida para jogar via terminal.
+
+## Engenharia de Prompt
+
+O desafio técnico deste projeto reside na forma como a IA é manipulada para agir como um motor de jogo estável. Foram utilizadas três estratégias principais:
+
+### 1. Saída Estrita em JSON (JSON Enforcement)
+
+Para garantir que o código Python (Pygame) consiga ler os dados da IA sem erros (crash), utilizamos o parâmetro nativo response_mime_type: "application/json".
+
+O problema: LLMs tendem a ser verbosos ("Claro, aqui está o JSON...").
+
+A solução: Forçar a saída JSON garante que variáveis como dinheiro, felicidade e poder_militar sejam sempre inteiros ou strings formatadas corretamente para o HUD do jogo.
+
+### 2. Arquitetura de Dupla Persona
+
+O jogo utiliza duas instâncias separadas do modelo Gemini para funções distintas:
+
+O Game Master (Narrador): Configurado com temperatura mais alta (0.4) para criatividade. Ele narra a cena, inventa diálogos e calcula os danos de batalha.
+
+O Cronista Real (Sistema de Save): Uma instância analítica focada em Compressão de Contexto. Ele lê o turno atual e o reescreve em um parágrafo denso e histórico. Isso permite "salvar" o jogo em um arquivo .txt pequeno, contendo apenas a essência dos fatos, contornando limites de tokens em sessões longas.
+
+### 3. Separação Lógica vs. Narrativa
+
+O System Prompt instrui a IA a separar o que o jogador lê (Aventura) do que o código processa (Status do Reino).
+
+{
+  "aventura": "O texto que aparece na tela para o jogador...",
+  "status_reino": {
+    "dinheiro": 4500,
+    "felicidade": "80%"
+  }
+}
 
 
-### **Get API Key**
-1. 🌐 Go to: **[Google AI Studio](https://aistudio.google.com)**
-2. 🔑 Create an account and get a **free** API key
-3. 📝 Set it up in the Python files 
+## Instalação e Configuração
 
-#### **Configure in Files:**
+### Pré-requisitos:
+* Python 3.8 ou superior.
+* Uma API Key do Google AI Studio (Gemini).
+* Clonar e Instalar Dependências:
+```
+git clone [https://github.com/seu-usuario/seu-repo.git](https://github.com/seu-usuario/seu-repo.git)
+cd seu-repo
+pip install -r requirements.txt
+```
+Dependências principais: google-generativeai, pygame, pygame-gui.
 
-**🖥️ Terminal RPG** (`rpg_with_gemini/terminal_rpg/rpg.py`, line 12):
-```python
-API_KEY = 'YOUR_KEY_HERE'  # 👈 Replace with your actual key
+### 2.Configurar a API Key
+Obtenha sua chave gratuitamente em Google AI Studio.
+Abra os arquivos rpg_grafico.py e rpg_texto.py e edite a variável:
+API_KEY = 'COLE_SUA_CHAVE_AQUI'
+
+## 🎮 Como Jogar
+### Modo Gráfico (Pygame)
+Execute o comando:
+```
+python rpg_grafico.py
 ```
 
-**🎨 Graphical RPG** (`rpg_with_gemini/graphical_rpg/graphical_rpg.py`, line 16):
-```python
-API_KEY = 'YOUR_KEY_HERE'  # 👈 Replace with your actual key
+### Modo Texto (Terminal)
+
+Execute o comando:
+```
+python rpg_texto.py
 ```
 
----
+Foco: Narrativa rápida e debug.
 
-## 🎮 How to Play
+Histórico: O jogo salva automaticamente seu progresso em arquivos .txt na pasta mundos/. Você pode fechar e continuar exatamente de onde parou.
 
-### 🖥️ **Terminal RPG**
-```bash
-cd rpg_with_gemini/terminal_rpg
-source ../../venv/bin/activate
-chmod +x install_dependencies.sh && chmod +x check_env.sh
-./install_dependencies.sh
-./check_env.sh
-python3 rpg.py
-```
+Notas do Desenvolvedor:
 
-###  **🎨Graphical RPG**
-```bash
-cd rpg_with_gemini/graphical_rpg  
-source ../../venv/bin/activate
-chmod +x install_dependencies.sh && chmod +x check_env.sh
-./install_dependencies.sh
-./check_env.sh
-python3 graphical_rpg.py
-```
+Este projeto foi desenvolvido inicialmente durante o intervalo do primeiro ano da faculdade. O objetivo era testar os limites da API gratuita do Gemini em um contexto de "Stateful Application" (Aplicação com Estado). E utiliza-lá onde mais parecia óbio, uma geração de texto vinculado a creatividade ao invés de precisão.
 
-### Observation
+Desafios:
+Manter a consistência numérica da IA (ex: garantir que ela subtraia ouro ao comprar itens).
+Implementar um sistema de memória de longo prazo via arquivos de texto.
 
-This was my first small project, made during the summer break of my first year of college. The goal was to create a kind of RPG using AI. It was one of the first programs I wrote, so it isn't very well modularized and error handling is scattered throughout the code.
-
-The idea was to have some fixed metrics that the AI would control automatically, but the AI is definitely not great at remembering values for long (try it!). Since Gemini has a free API, I wanted to build something that used it.
-
-I also wanted to be able to continue the RPG later, so I recorded everything the AI did — in a summarized form — and saved it to a file when exiting the game. That way, when I returned, the AI would read the file and have context about what I had already done. This system isn't well structured and the AI still has a context limit, so it will eventually forget past events. Someday I plan to build a better long-term memory system, probably using more variables and even a database.
+Futuro:
+Planejo implementar um banco de dados vetorial (RAG) para que a IA se lembre de NPCs encontrados há centenas de turnos atrás, superando a limitação do arquivo de texto linear.
 
 
 ## Game Demo
