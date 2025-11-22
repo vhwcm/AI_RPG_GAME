@@ -5,6 +5,7 @@ from pygame import mixer
 import pygame_gui
 import google.generativeai as genai
 import json
+import time
 
 # Silenciar warnings do Google Cloud (opcional)
 import warnings
@@ -12,38 +13,96 @@ warnings.filterwarnings("ignore", category=UserWarning)
 os.environ['GRPC_VERBOSITY'] = 'ERROR'
 os.environ['GLOG_minloglevel'] = '2'
 
-##############################################################################Configurando Gemini#####################################################################################################################################################################
-API_KEY = 'YOUR API KEY'
+##############################################################################
+# CONFIGURAÇÃO GEMINI (OTIMIZADA)
+##############################################################################
+API_KEY = 'SUA_API_KEY_AQUI'  # <--- COLOQUE SUA CHAVE AQUI
 genai.configure(api_key=API_KEY)
 
-generation_config = {
+# Configuração para forçar resposta em JSON (Crucial para evitar erros)
+generation_config_json = {
   "candidate_count": 1,
-  "temperature": 0.
+  "temperature": 0.4,
+  "response_mime_type": "application/json"
 }
 
-safety_settings={
+# Configuração para o historiador (Texto normal)
+generation_config_text = {
+  "candidate_count": 1,
+  "temperature": 0.2,
+}
+
+safety_settings = {
     'HATE': 'BLOCK_NONE',
     'HARASSMENT': 'BLOCK_NONE',
-    'SEXUAL' : 'BLOCK_NONE',
-    'DANGEROUS' : 'BLOCK_NONE'
-    }
-system_instruction =  "QUERO QUE SEU TEXTO GERADO SEJA TODO EM FORMATO JSON! Onde tera uma parte chamada 'aventura', e outra parte chamada 'status_reino'(nas partes dentro dessa, não ultrapasse 30 caracteres). dentro de status do reino terá uma parte chamada 'dinheiro'(somente o valor numérico).Uma parte chamada 'religião'(que seria a religião do meu reino).Uma parte chamada 'poder_militar'(valor numerico).Uma outra chamada 'nome_reino'.Outra chamada 'imperador'(meu nome).E por fim uma chamda 'felicidade'(0-100%).Utilize somente as partes json indicadas anterirmente. Estamos em um jogo de rpg.\\n\\ninicialmente(quando eu dicer que criarei um novo reino) eu poderei escolher um nome para o meu reino, meu  nome e espécie, a felicidade começa em 70% e o dinheiro entre 5.000, o poder militar inicial vai variar de acordo com a espécie(1000-5000). gostaria que o rpg fosse de estratégia, contento quizes, perguntas e desiões de estratégia. Eu serei o rei, e tomarei desições economicas, religiosas e militares. sempre me de opções enumeradas de escolha. minhas deçisoes afetaram os status do meu reino. Durante o jogo poderei fazer aliados e inimigos mortais, sendo que eles podem me atacar ou me proteger. O jogo funcionará como se voce fosse um servo do reino que me explicasse o que está acontecendo e me pedisse para escolher o que fazer. Eu posso fazer perguntas para vc para vc me detalhar algo. Sempre que um novo império entrar em contato, mostra os status de tal império como a barra de menu básica. Normalmente me de opções de numeradas para eu fazer uma decisão. no inicio voce sempre receberá um contexto na forma cronológica, só manter o contexto.Respoda somente em formato JSON sua resposta toda! Exemplo: \n  \"aventura\":\n\"Majestade asd, os gnomos de asd aguardam ansiosamente por sua orientação divina! As seguintes crenças ressoam com nosso povo:\\n\\n1. **A Grande Forja:** Reverencia a chama eterna como fonte de criação e engenhosidade gnômica.\\n2. **Os Espíritos da Floresta:** Busca harmonia com a natureza, venerando os espíritos ancestrais da floresta.\\n3. **O Culto à Engenhoca:** Valoriza a inteligência e a inovação, buscando aperfeiçoamento tecnológico constante.\\n\\nQual doutrina guiará as almas de asd, Majestade?\"\n ,\n  \"status_reino\": {\n    \"dinheiro\": 5000,\n    \"religião\": \"Indefinida\",\n    \"poder_militar\": 2000,\n    \"nome_reino\": \"asd\",\n    \"imperador\": \"asd\",\n    \"felicidade\": \"70%\"\n  }\n}\n"
-system_instruction_h = "eu quero que com os dados que eu te dei vc guarde as informações, sem tópicos e em único paragrafo, como se fosse um livro com todas as informações que eu te dei, sem ser em formato de jogo, como se vc fosse um narrador oniciente.Guarde os status do reino. Ignora o que lhe for dado em que esteja numerado(pois seria as opçoes do jogador, mas ele não executara todas) Sempre que eu te mandar algo, escreva a continução da sua respostada dada anteriormente, com os novos dados. Escreva no máximo 3 linhas e não coloque nada que não coloque caracteres especias.LEMBRE=SE DE ESCREVER OS STATUS DO REINO"
+    'SEXUAL': 'BLOCK_NONE',
+    'DANGEROUS': 'BLOCK_NONE'
+}
 
-model_h = genai.GenerativeModel(model_name='gemini-2.5-pro',generation_config=generation_config,system_instruction=system_instruction_h, safety_settings=safety_settings,)
+# Prompt do Jogo (Game Master)
+system_instruction = """
+VOCÊ É O CONSELHEIRO REAL EM UM RPG DE ESTRATÉGIA MEDIEVAL/FANTASIA.
+SUA MISSÃO É NARRAR EVENTOS E GERENCIAR OS DADOS DO REINO.
+
+### REGRAS DE FORMATAÇÃO (OBRIGATÓRIO)
+Sua resposta deve ser APENAS um JSON seguindo exatamente este esquema:
+{
+  "aventura": "Texto narrativo aqui (máximo 600 caracteres). Descreva o cenário, o conflito e ofereça SEMPRE 3 opções numeradas de ação para o Imperador.",
+  "status_reino": {
+    "nome_reino": "Nome do Reino (String)",
+    "imperador": "Nome do Jogador (String)",
+    "dinheiro": 5000 (Inteiro, sem pontos),
+    "religião": "Nome da Religião (String)",
+    "poder_militar": 1000 (Inteiro),
+    "felicidade": "70%" (String com %)
+  }
+}
+
+### REGRAS DE JOGO
+1. **Início:** Se for criar um novo reino, defina Felicidade: 70%, Dinheiro: 5000, Militar: 1000-5000 (variando pela espécie).
+2. **Consequências:** As escolhas do usuário devem alterar os números no próximo turno logicamente (ex: guerra gasta dinheiro e militar).
+3. **Tom:** Use linguagem formal ("Vossa Majestade").
+4. **Inputs:** O usuário enviará comandos ou escolhas. Interprete-os e avance a história.
+"""
+
+# Prompt do Historiador (Save Game)
+system_instruction_h = """
+ATUE COMO O CRONISTA REAL.
+Sua função é manter um registro conciso e cronológico em um ÚNICO parágrafo denso.
+1. Atualize o resumo anterior com os novos eventos.
+2. Ignore opções que o jogador NÃO escolheu.
+3. Mantenha os status numéricos finais no texto.
+4. NÃO use tópicos, apenas texto corrido.
+"""
+
+# Inicializando Modelos
+model_h = genai.GenerativeModel(
+    model_name='gemini-2.5-flash', 
+    generation_config=generation_config_text,
+    system_instruction=system_instruction_h,
+    safety_settings=safety_settings
+)
 chat_history = model_h.start_chat(history=[])
-model = genai.GenerativeModel(model_name='gemini-2.5-pro',generation_config=generation_config,system_instruction=system_instruction, safety_settings=safety_settings,)
+
+model = genai.GenerativeModel(
+    model_name='gemini-2.5-flash',
+    generation_config=generation_config_json, 
+    system_instruction=system_instruction,
+    safety_settings=safety_settings
+)
 chat = model.start_chat(history=[])
 
 
-#################################################GAME LOOP#####################################################################################################################################################################################################
+#################################################
+# GAME LOOP & UI
+#################################################
 
 global prompt
 
-#formatando o texto
+# Função para quebra de linha automática (Word Wrap)
 def blit_text(surface, text, pos, font, max_width, start_pos, color=pygame.Color('black')):
-    words = [word.split(' ') for word in text.splitlines()]  # 2D array where each row is a list of words.
-    space = font.size(' ')[0]  # The width of a space.
+    words = [word.split(' ') for word in text.splitlines()]
+    space = font.size(' ')[0]
     x, y = pos
     y += start_pos
     max_height = 0
@@ -52,79 +111,89 @@ def blit_text(surface, text, pos, font, max_width, start_pos, color=pygame.Color
             word_surface = font.render(word, 0, color)
             word_width, word_height = word_surface.get_size()
             if x + word_width >= max_width:
-                x = pos[0]  # Reset the x.
-                y += word_height  # Start on new row.
+                x = pos[0]
+                y += word_height
             surface.blit(word_surface, (x, y))
             x += word_width + space
             max_height = max(max_height, y)
-        x = pos[0]  # Reset the x.
-        y += word_height  # Start on new row.
+        x = pos[0]
+        y += word_height
         max_height = max(max_height, y)
     return max_height - start_pos
 
-
 clock = pygame.time.Clock()
 
-#inicio do jogo
 def game_screen():
-    text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((16*screen_width/100, 97*screen_height/100), (81.5*screen_width/100, 30)), manager=manager)
+    # UI Setup
+    text_entry = pygame_gui.elements.UITextEntryLine(
+        relative_rect=pygame.Rect((16*screen_width/100, 97*screen_height/100), (81.5*screen_width/100, 30)), 
+        manager=manager
+    )
     text_entry.hide()
     screen.fill((0, 0, 0))
-    background = pygame.image.load(f"reinos/reino {especie}.png")
+    
+    # Carregamento de Assets com Fallback
+    try:
+        background = pygame.image.load(f"reinos/reino {especie}.png")
+    except:
+        background = pygame.Surface(screen.get_size())
+        background.fill((50, 50, 50)) # Cinza se não achar imagem
+        
     screen_size = screen.get_size()
     background = pygame.transform.scale(background, screen_size)
     
-    # Garantir que a pasta aventuras existe
     os.makedirs('aventuras/', exist_ok=True)
     
-    file = open(f"aventuras/{aventura}.txt", "a+")
-    file.seek(0)
-    conteudo = file.read()
-    if possui_reino.lower() == "sim":
-        prompt = f"{conteudo}. Eu  estou continuando minha aventura. sou o imperador(a) do reino {reino} e gostaria de saber como ele está. Meu nome é {nome} e sou da raça{especie}."
-    else:     
-        prompt = f"Gostaria de criar um reino de '{especie}' chamado '{reino}'. Meu nome será '{nome}'. Para iniciar quero discutir qual será a religião do meu reino."
-    
-    # Try to send message with error handling
+    # Carregar Save ou Iniciar
     try:
-        chat.send_message(prompt)
+        file = open(f"aventuras/{aventura}.txt", "r")
+        conteudo = file.read()
+        file.close()
+    except FileNotFoundError:
+        conteudo = ""
+    
+    file = open(f"aventuras/{aventura}.txt", "a+")
+
+    if possui_reino.lower() == "sim":
+        prompt_inicial = f"{conteudo}. CONTINUAÇÃO: Eu sou o imperador(a) {nome} do reino {reino} (raça {especie}). Relate a situação atual."
+    else:      
+        prompt_inicial = f"CRIAR NOVO REINO: Raça '{especie}', Nome '{reino}', Imperador '{nome}'. Vamos discutir a religião inicial."
+    
+    # Primeiro envio para a IA
+    try:
+        chat.send_message(prompt_inicial)
         respost = chat.last.text
     except Exception as e:
-        error_msg = str(e)
-        print(f"\n❌ ERROR: {error_msg}\n")
-        if "429" in error_msg or "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
-            print("⚠️  API QUOTA EXCEEDED!")
-            print("=" * 60)
-            print("Your Google Gemini API key has reached its usage limit.")
-            print("\nSOLUTIONS:")
-            print("1. Wait a few minutes and try again (free tier resets)")
-            print("2. Generate a new API key at:")
-            print("   https://aistudio.google.com/app/apikey")
-            print("3. Replace the API_KEY in rpg_grafico.py (line 16)")
-            print("=" * 60)
+        print(f"Erro API Inicial: {e}")
         pygame.quit()
-        raise
+        return
 
-    #retirar possiveis respostas erradas do gemini
-    respost = respost.replace("json", "")
-    respost = respost.replace("```", "")
-    respost = respost.replace("---", "")
+    # Configuração de Fontes
+    try:
+        font_text = pygame.font.Font("Cinzel/Cinzel-VariableFont_wght.ttf", 22)
+        fons = pygame.font.Font("Cinzel/Cinzel-VariableFont_wght.ttf", 22)
+    except:
+        font_text = pygame.font.Font(None, 22)
+        fons = pygame.font.Font(None, 22)
+
+    try:
+        dados = json.loads(respost)
+    except json.JSONDecodeError:
+        dados = {"aventura": "Erro ao processar dados do reino. Tente novamente.", "status_reino": {"dinheiro":0, "religião": "Erro", "poder_militar": 0, "nome_reino": "Erro", "imperador": "Erro", "felicidade": "0%"}}
+
+    aventure = dados.get('aventura', '')
+    status = dados.get('status_reino', {})
     
-    font_text = pygame.font.Font("Cinzel/Cinzel-VariableFont_wght.ttf", 22)
-    fons = pygame.font.Font("Cinzel/Cinzel-VariableFont_wght.ttf", 22)
+    # Extração segura
+    religião = status.get('religião', 'N/A')
+    dinheiro = status.get('dinheiro', 0)
+    poder_militar = status.get('poder_militar', 0)
+    nome_reino = status.get('nome_reino', 'N/A')
+    imperador = status.get('imperador', 'N/A')
+    felicidade = status.get('felicidade', '0%')
 
-    #obtendo o json e armazenando em variaveis
-    dados = json.loads(respost)
-    aventure = dados['aventura']
-    status = dados['status_reino']
-    religião = status['religião']
-    dinheiro = status['dinheiro']
-    poder_militar = status['poder_militar']
-    nome_reino = status['nome_reino']
-    imperador = status['imperador']
-    felicidade = status['felicidade']
-    status_reino = f"######reino######\n{nome_reino}\n\n####Dinheiro######\n{dinheiro}\n\n#####Religião######\n{religião}\n\n##Poder militar###\n{poder_militar}\n\n####Felicidade####\n{felicidade}\n\n###Imperador#####\n{imperador}\n\n##################"
-    informacoes = status_reino + "\n" + str(aventure)
+    status_texto_formatado = f"###### REINO ######\n{nome_reino}\n\n#### DINHEIRO ####\n{dinheiro}\n\n##### RELIGIÃO #####\n{religião}\n\n## PODER MILITAR ##\n{poder_militar}\n\n#### FELICIDADE ####\n{felicidade}\n\n### IMPERADOR ###\n{imperador}\n\n##################"
+    informacoes = status_texto_formatado + "\n" + str(aventure)
     textl = f"{aventure}"
 
     clip_rect = pygame.Rect(17.5*screen_width/100, 3.7*screen_height/100, 93*screen_width/100, 93*screen_height/100)
@@ -134,149 +203,153 @@ def game_screen():
     start_pos = 0
     running = True
     waiting_for_input = False
-    l = 0
+    needs_history_update = False
+    
+    prompt_usuario = ""
 
-    #loop principal
-    while running and prompt != "fim":
-        #limitar os frames por segundo
-        time_delta = clock.tick(5)/1000.0
+    # LOOP PRINCIPAL DA TELA DE JOGO
+    while running and prompt_usuario != "fim":
+        time_delta = clock.tick(30)/1000.0 # Aumentei para 30FPS para fluidez
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-    
             manager.process_events(event)
+            
+            # Evento de input do usuário
+            if event.type == pygame_gui.UI_TEXT_ENTRY_FINISHED and waiting_for_input:
+                prompt_usuario = text_entry.get_text()
+                if prompt_usuario and prompt_usuario != "fim":
+                    text_entry.set_text("") # Limpa input
+                    text_entry.hide()
+                    waiting_for_input = False
+                    
+                    # Enviar para IA
+                    try:
+                        # Feedback visual simples
+                        textl = "O Conselheiro está pensando..."
+                        chat.send_message(prompt_usuario)
+                        respostaa = chat.last.text
+                        
+                        # Parse JSON
+                        respostaj = json.loads(respostaa)
+                        status = respostaj.get('status_reino', {})
+                        
+                        religião = status.get('religião', 'N/A')
+                        dinheiro = status.get('dinheiro', 0)
+                        poder_militar = status.get('poder_militar', 0)
+                        nome_reino = status.get('nome_reino', 'N/A')
+                        imperador = status.get('imperador', 'N/A')
+                        felicidade = status.get('felicidade', '0%')
+                        
+                        status_texto_formatado = f"###### REINO ######\n{nome_reino}\n\n#### DINHEIRO ####\n{dinheiro}\n\n##### RELIGIÃO #####\n{religião}\n\n## PODER MILITAR ##\n{poder_militar}\n\n#### FELICIDADE ####\n{felicidade}\n\n### IMPERADOR ###\n{imperador}\n\n##################"
+                        aventure = respostaj.get('aventura', '')
+                        textl = f"{aventure}"
+                        
+                        informacoes = status_texto_formatado + "\n" + aventure
+                        
+                        # Flag para atualizar histórico no próximo frame (evita travar input)
+                        needs_history_update = True
+                        
+                        # Resetar scroll
+                        start_pos = 0
+                        total_scroll = 0
+                        
+                    except Exception as e:
+                        print(f"Erro na rodada: {e}")
+                        textl = "Erro de comunicação com os deuses (API Error)."
+
         screen.blit(background, (0, 0))
-        screen.set_clip(clip_rects)   
-        blit_text(screen, status_reino,(1 , 25*screen_height/100), fons, 83*screen_width/100, 0 , (255,255 ,255))    
+        
+        # Desenhar Status
+        screen.set_clip(clip_rects)    
+        blit_text(screen, status_texto_formatado, (1, 25*screen_height/100), fons, 83*screen_width/100, 0, (255,255,255))    
+        
+        # Desenhar Aventura (Texto Principal)
         screen.set_clip(clip_rect)
-        total_height = blit_text(screen, textl, (17.5*screen_width/100, 3.7*screen_height/100), font_text, 95*screen_width/100, start_pos, (255,255 ,255))
+        total_height = blit_text(screen, textl, (17.5*screen_width/100, 3.7*screen_height/100), font_text, 95*screen_width/100, start_pos, (255,255,255))
+        
+        # Lógica de Scroll Automático
+        if not waiting_for_input:
+            if total_scroll <= total_height - clip_rect.height:
+                start_pos -= 1.0 # Aumentei velocidade
+                total_scroll += 1.0
+            else:
+                screen.set_clip(None)
+                text_entry.show()
+                text_entry.focus()
+                waiting_for_input = True
+
+        # Atualização do Historiador (Sem travar 8s, apenas um delay pequeno se necessário)
+        if needs_history_update:
+            try:
+                chat_history.send_message(informacoes)
+                file.write(chat_history.last.text + "\n")
+                file.flush() # Garante gravação
+            except:
+                pass
+            needs_history_update = False
+
+        manager.update(time_delta)
+        manager.draw_ui(screen)
         pygame.display.flip()
 
-        #otimizando o tempo de resposta para mandar informações ao gemini quando o novo texto já estiver sido carregado
-        if l == 1:
-          pygame.time.wait(8000)     
-          chat_history.send_message(informacoes)
-          file.write(chat_history.last.text )
-          l = 0
-          pygame.time.wait(8000)
-    
-        if total_scroll <= total_height - clip_rect.height and total_scroll >= 0:
-            start_pos -= 0.3
-            total_scroll += 0.3
-        elif total_scroll >= total_height - clip_rect.height:
-            screen.set_clip(None)
-            text_entry.show()
-            waiting_for_input = True
-    
-            #recebendo a resposta do jogador
-            while waiting_for_input:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
-                        waiting_for_input = False
-                    elif event.type == pygame_gui.UI_TEXT_ENTRY_FINISHED:
-                            prompt = text_entry.get_text()
-                            if prompt != "fim":
-                                text_entry.hide()
-                                pygame.display.flip()
-                                
-                                # Try to send message with error handling
-                                try:
-                                    chat.send_message(prompt)
-                                    respostaa = chat.last.text
-                                except Exception as e:
-                                    error_msg = str(e)
-                                    print(f"\n❌ ERROR: {error_msg}\n")
-                                    if "429" in error_msg or "quota" in error_msg.lower():
-                                        print("⚠️  API quota exceeded! Please wait or get a new API key.")
-                                    pygame.quit()
-                                    raise
-                                respostaa = respostaa.replace("json", "")
-                                respostaa = respostaa.replace("```", "")
-                                respostaa = respostaa.replace("---", "")
-                                respostaj = json.loads(respostaa)
-                                status = respostaj['status_reino']
-                                religião = status['religião']
-                                dinheiro = status['dinheiro']
-                                poder_militar = status['poder_militar']
-                                nome_reino = status['nome_reino']
-                                imperador = status['imperador']
-                                felicidade = status['felicidade']
-                                status_reino = f"######reino######\n{nome_reino}\n\n####Dinheiro######\n{dinheiro}\n\n#####Religião######\n{religião}\n\n##Poder militar###\n{poder_militar}\n\n####Felicidade####\n{felicidade}\n\n###Imperador#####\n{imperador}\n\n##################"
-                                aventure = respostaj['aventura']
-                                textl = f"{aventure}"  
-                                l = 1
-                                informacoes = status_reino + "\n" + aventure
-                            waiting_for_input = False
-                    
-                    manager.process_events(event)
-    
-                manager.update(time_delta)
-                manager.draw_ui(screen)
-                pygame.display.flip()
-    #encerrando e salvando
-    chat_history.send_message(informacoes)
-    file.write(chat_history.last.text ) 
-    print ("\nFIM\n")
+    # Encerrando
+    try:
+        chat_history.send_message(informacoes)
+        file.write(chat_history.last.text) 
+        file.close()
+    except:
+        pass
+    print("\nFIM DA SESSÃO\n")
     pygame.quit()
-        
-        
 
 
- ##############################inicializando o jogo#############################################################################################################3   
-
+##############################
+# INICIALIZANDO O JOGO
+##############################
 
 pygame.init()
 pygame.display.set_mode()
 
-
 screen = pygame.display.get_surface()
 if screen is not None:
     screen_width, screen_height = screen.get_size()
-    screen_height = screen_height * 0.7
-    screen_width = screen_width * 0.7
-
+    screen_height = screen_height * 0.9 # Ajuste leve
+    screen_width = screen_width * 0.9
+    screen = pygame.display.set_mode((int(screen_width), int(screen_height)))
 else:
-    print('A tela ainda não foi inicializada')
+    screen = pygame.display.set_mode((1280, 720))
+    screen_width, screen_height = 1280, 720
 
-# Configurações da tela
-screen = pygame.display.set_mode((screen_width,screen_height))
+manager = pygame_gui.UIManager((int(screen_width), int(screen_height)))
 
-manager = pygame_gui.UIManager((screen_width, screen_height))
+# Tenta carregar música
+try:
+    mixer.init()
+    mixer.music.load('musicas/clima de harmonia.mp3')
+    mixer.music.play(-1) # Loop infinito
+except:
+    print("Música não encontrada, continuando mudo.")
 
+# Fonte para menus
+try:
+    FONT = pygame.freetype.Font("Cinzel/Cinzel-VariableFont_wght.ttf", 24)
+except:
+    FONT = pygame.freetype.SysFont("Arial", 24)
 
-# Configurações de fonte
-FONT = pygame.font.Font(None, 32)
-
-# Configurações de cores
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-
-# Carrega a música
-mixer.init()
-mixer.music.load('musicas/clima de harmonia.mp3')
-mixer.music.play()
-
-
-# Configurações da fonte
-FONT = pygame.freetype.Font("Cinzel/Cinzel-VariableFont_wght.ttf", 24)
-
+# Perguntas Iniciais
 questions = ["Qual o nome da aventura? ", "Qual o nome do seu reino? ", "Qual é seu nome? ", "Já possui um reino(sim ou nao)? "]
 answers = [""] * len(questions)
 active_index = 0
 
-# Verificar se pasta aventuras existe, se não, criar
-try:
-    file_list = os.listdir('aventuras/')
-except FileNotFoundError:
-    os.makedirs('aventuras/', exist_ok=True)
-    file_list = []
-
-while True:
+# Menu de Texto Inicial
+menu_running = True
+while menu_running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
-            break
+            exit()
         if event.type == pygame.MOUSEBUTTONDOWN:
             for i in range(len(questions)):
                 if pygame.Rect(10, i * 100 + 50, screen_width - 20, 32).collidepoint(event.pos):
@@ -284,6 +357,9 @@ while True:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
                 active_index = (active_index + 1) % len(questions)
+                # Se preencheu tudo, tenta sair
+                if all(answers) and active_index == 0:
+                    menu_running = False
             elif event.key == pygame.K_BACKSPACE:
                 answers[active_index] = answers[active_index][:-1]
             else:
@@ -294,56 +370,50 @@ while True:
         FONT.render_to(screen, (10, i * 100), question, (255, 255, 255))
         pygame.draw.rect(screen, (255, 255, 255), (10, i * 100 + 50, screen_width - 20, 32), 2)
         FONT.render_to(screen, (15, i * 100 + 55), answers[i], (255, 255, 255))
-
-    
     
     pygame.display.flip()
 
-    aventura = answers[0]
-    reino = answers[1] 
-    nome = answers[2]
-    possui_reino = answers[3]
-    if possui_reino.lower() == "sim" or possui_reino.lower() == "nao":
-        if aventura != "" and reino != "" and nome != "":
-            break
+aventura = answers[0]
+reino = answers[1] 
+nome = answers[2]
+possui_reino = answers[3]
 
-# Define o número de imagens por linha
+# Seleção de Raça 
 IMAGES_PER_ROW = 7
-
-# Carrega e redimensiona as imagens
-image_files = os.listdir('lideres')
-images = [pygame.image.load('lideres/' + file) for file in image_files]
-images = [pygame.transform.scale(img, (200, 200)) for img in images]
-
-# Cria os botões
-buttons = [pygame.Rect((i % IMAGES_PER_ROW) * 210, 100 + (i // IMAGES_PER_ROW) * 210, 200, 200) for i in range(len(images))]
-
-def button_clicked(i):
-    global especie
-    especie = os.path.splitext(image_files[i])[0]
+try:
+    image_files = [f for f in os.listdir('lideres') if f.endswith(('.png', '.jpg'))]
+    images = [pygame.image.load('lideres/' + file) for file in image_files]
+    images = [pygame.transform.scale(img, (200, 200)) for img in images]
+    buttons = [pygame.Rect((i % IMAGES_PER_ROW) * 210, 100 + (i // IMAGES_PER_ROW) * 210, 200, 200) for i in range(len(images))]
+    has_images = True
+except:
+    has_images = False
+    especie = "Humano" # Default se não houver imagens
+    print("Pasta 'lideres' vazia ou inexistente. Raça definida como Humano.")
     game_screen()
 
-# Cria a fonte e o texto
-font = pygame.font.Font(None, 60)
-text = font.render("Escolha uma raça:", True, (255, 255, 255))
+# Loop Seleção Raça
+if has_images:
+    font_race = pygame.font.Font(None, 60)
+    text_race = font_race.render("Escolha uma raça:", True, (255, 255, 255))
+    
+    race_running = True
+    while race_running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                race_running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                for i, button in enumerate(buttons):
+                    if button.collidepoint(event.pos):
+                        especie = os.path.splitext(image_files[i])[0]
+                        game_screen() # Inicia o jogo
+                        race_running = False # Sai do loop ao voltar
 
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            for i, button in enumerate(buttons):
-                if button.collidepoint(event.pos):
-                    button_clicked(i)
-
-    screen.fill((0, 0, 0))
-    screen.blit(text, (0, 50))  # Desenha o texto
-    for i, button in enumerate(buttons):
-        pygame.draw.rect(screen, (255, 255, 255), button)
-        screen.blit(images[i], ((i % IMAGES_PER_ROW) * 210, 100 + (i // IMAGES_PER_ROW) * 210))
-    pygame.display.flip()
-
-
+        screen.fill((0, 0, 0))
+        screen.blit(text_race, (0, 50))
+        for i, button in enumerate(buttons):
+            pygame.draw.rect(screen, (255, 255, 255), button)
+            screen.blit(images[i], ((i % IMAGES_PER_ROW) * 210, 100 + (i // IMAGES_PER_ROW) * 210))
+        pygame.display.flip()
 
 pygame.quit()
